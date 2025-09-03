@@ -1,5 +1,6 @@
 # CANChallenge/main.py
 import sys
+import threading
 import can
 from io_can import setup_vcan, start_cangen
 from constants import VCAN_INTERFACE
@@ -16,7 +17,7 @@ def main():
 
     # Launch traffic generator (if your helper starts a subprocess/thread, consider adding a matching stop later)
     init_state()
-    send_startup_flag()
+    threading.Thread(target=send_startup_flag, daemon=True).start()
     start_cangen()
     
     bus = None

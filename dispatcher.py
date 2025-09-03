@@ -1,5 +1,6 @@
 # CANChallenge/dispatcher.py
 import can
+from challenges import arbitration
 
 def handle_can_message(msg: can.Message):
     """
@@ -12,6 +13,9 @@ def handle_can_message(msg: can.Message):
         data = list(msg.data)
 
         print(f"[DISPATCH] ID=0x{arb_id:03X}, Data={[hex(b) for b in data]}")
+        if arb_id <= 0x00F or arb_id in (0x014, 0x215):
+            arbitration.handle(msg)
+            return
 
         # Placeholder routing (to be filled as we implement challenges)
         if arb_id == 0x2A1:
