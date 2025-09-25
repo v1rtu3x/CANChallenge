@@ -1,6 +1,6 @@
 # CANChallenge/dispatcher.py
 import can
-from challenges import arbitration
+from challenges import arbitration, rolling_crc
 
 def handle_can_message(msg: can.Message):
     """
@@ -18,9 +18,9 @@ def handle_can_message(msg: can.Message):
             return
 
         # Placeholder routing (to be filled as we implement challenges)
+        # Rolling counter + CRC (0x2A1)
         if arb_id == 0x2A1:
-            # from challenges import rolling_crc
-            # rolling_crc.handle(msg)
+            rolling_crc.handle(msg)
             pass
         elif arb_id <= 0x00F or arb_id in (0x014, 0x215):
             # from challenges import arbitration

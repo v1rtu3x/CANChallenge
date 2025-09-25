@@ -7,7 +7,7 @@ from constants import VCAN_INTERFACE
 from dispatcher import handle_can_message
 from state import init_state
 from challenges.startup_flag import send_startup_flag
-
+from challenges import rolling_crc
 def main():
     print("[INFO] Starting UDS ECU simulation with PCI")
 
@@ -17,6 +17,7 @@ def main():
 
     # Launch traffic generator (if your helper starts a subprocess/thread, consider adding a matching stop later)
     init_state()
+    rolling_crc.start()
     threading.Thread(target=send_startup_flag, daemon=True).start()
     start_cangen()
     

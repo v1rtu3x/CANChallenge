@@ -12,9 +12,7 @@ def init_state():
     """
     global state
     state = {
-        "rolling_crc": {
-            "last_counter": None,
-        },
+        "rolling_crc": {"last_counter": None},
         "arbitration": {
             "timestamps": [],   # recent low-ID frame times
             "window_until": 0,  # grace window end time
