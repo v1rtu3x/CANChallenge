@@ -1,6 +1,6 @@
 # CANChallenge/dispatcher.py
 import can
-from challenges import arbitration, rolling_crc
+from challenges import arbitration, rolling_crc, timing_replay
 
 def handle_can_message(msg: can.Message):
     """
@@ -27,8 +27,7 @@ def handle_can_message(msg: can.Message):
             # arbitration.handle(msg)
             pass
         elif arb_id == 0x440:
-            # from challenges import timing_replay
-            # timing_replay.handle(msg)
+            timing_replay.handle(msg)
             pass
         elif arb_id in (0x120, 0x121, 0x122, 0x210, 0x2B0):
             # from challenges import majority_vote
