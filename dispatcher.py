@@ -1,6 +1,6 @@
 # CANChallenge/dispatcher.py
 import can
-from challenges import arbitration, rolling_crc, timing_replay
+from challenges import arbitration, rolling_crc, timing_replay, majority_spoof, lfsr_token
 
 def handle_can_message(msg: can.Message):
     """
@@ -21,23 +21,17 @@ def handle_can_message(msg: can.Message):
         # Rolling counter + CRC (0x2A1)
         if arb_id == 0x2A1:
             rolling_crc.handle(msg)
-            pass
+            return
         elif arb_id <= 0x00F or arb_id in (0x014, 0x215):
             # from challenges import arbitration
             # arbitration.handle(msg)
-            pass
+            return
         elif arb_id == 0x440:
             timing_replay.handle(msg)
-            pass
+            return
         elif arb_id in (0x120, 0x121, 0x122, 0x210, 0x2B0):
-            # from challenges import majority_vote
-            # majority_vote.handle(msg)
-            pass
-        elif arb_id == 0x211:
-            # from challenges import lfsr_token
-            # lfsr_token.handle(msg)
-            pass
-        # Startup flag is emitted at boot, not triggered by messages
+            majority_spoof.handle(msg)
+            return
 
     except Exception as e:
         print(f"[DISPATCH ERROR] {e}")
