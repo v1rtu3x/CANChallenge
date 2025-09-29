@@ -1,4 +1,4 @@
-# CANChallenge/main.py
+# main.py
 import sys
 import threading
 import can
@@ -8,6 +8,8 @@ from dispatcher import handle_can_message
 from state import init_state
 from challenges.startup_flag import send_startup_flag
 from challenges import rolling_crc
+from challenges import hex_broadcast  # <-- NEW
+
 def main():
     print("[INFO] Starting UDS ECU simulation with PCI")
 
@@ -15,18 +17,22 @@ def main():
         print("[FATAL] Failed to setup vcan interface. Exiting.")
         return
 
-    # Launch traffic generator (if your helper starts a subprocess/thread, consider adding a matching stop later)
     init_state()
     rolling_crc.start()
     threading.Thread(target=send_startup_flag, daemon=True).start()
+
+    # Start normal sim traffic as before (unaltered)
     start_cangen()
-    
+
+    # Start periodic HEX broadcaster (pauses/resumes around bursts)
+    hex_broadcast.start()
+
     bus = None
     try:
         bus = can.interface.Bus(channel=VCAN_INTERFACE, bustype='socketcan')
-        print(f"[INFO] Listening for UDS requests on {VCAN_INTERFACE}... Press Ctrl+C to exit.")
+        print(f"[INFO] Listening on {VCAN_INTERFACE}... Ctrl+C to exit.")
         while True:
-            msg = bus.recv(timeout=1.0)  # 1s timeout lets Ctrl+C be handled promptly
+            msg = bus.recv(timeout=1.0)
             if msg is not None:
                 handle_can_message(msg)
 
@@ -34,17 +40,14 @@ def main():
         print("\n[INFO] Keyboard interrupt received. Shutting down cleanly...")
 
     except Exception as e:
-        print(f"[ERROR] An unexpected error occurred: {e}")
+        print(f"[ERROR] Unexpected error: {e}")
 
     finally:
         if bus is not None:
             try:
                 bus.shutdown()
-                print("[INFO] CAN bus shutdown completed")
-            except Exception as e:
-                print(f"[WARN] Error during CAN bus shutdown: {e}")
-        # If start_cangen() creates a background process/thread, stop it here
-        # e.g., stop_cangen()  # implement if needed
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     main()
