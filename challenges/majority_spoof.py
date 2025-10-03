@@ -28,7 +28,7 @@ def _save_state():
     })
 
 def _emit_flag():
-    flag_text = "FLAG{1_l0v3_d3m0cr4cy}"
+    flag_text = "DMI{1_l0v3_d3m0cr4cy}"
     if chunk_and_send_flag:
         try:
             chunk_and_send_flag(FLAG_ID, flag_text); return

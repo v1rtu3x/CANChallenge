@@ -14,18 +14,16 @@ HEX_PATH = "resources/payload.hex"  # text file with hex bytes (any separators/w
 ARB_ID = 0x600
 
 INTERVAL_S = 90.0           # broadcast period
-FRAME_DELAY_S = 0.01        # 10 ms between consecutive frames
+FRAME_DELAY_S = 0.05        # 50 ms between consecutive frames
 QUIET_GRACE_S = 0.2         # small settle time after pause
 
-LEADING_ZERO_BYTES = 64     # prepend zeros so the start is easily visible in dumps
+LEADING_ZERO_BYTES = 128     # prepend zeros so the start is easily visible
+TRAILING_ZERO_BYTES = 128    # append zeros so the end is clearly visible
 
 _thread: Optional[threading.Thread] = None
 
 def _pkill(signal: str):
-    """
-    Send a signal to any running cangen processes.
-    signal: "STOP" to pause, "CONT" to resume.
-    """
+    """Send a signal to any running cangen processes (STOP or CONT)."""
     try:
         subprocess.run(["pkill", f"-{signal}", "-f", "cangen"], check=False)
         print(f"[HEX] sent SIG{signal} to cangen (if running)")
@@ -49,8 +47,8 @@ def _send_bytes(blob: bytes, arb_id: int):
     except Exception:
         bus = None
 
-    # Prepend a visible zero runway
-    blob = (b"\x00" * LEADING_ZERO_BYTES) + blob
+    # Add visible zero runway before and after
+    blob = (b"\x00" * LEADING_ZERO_BYTES) + blob + (b"\x00" * TRAILING_ZERO_BYTES)
 
     total = len(blob)
     nframes = (total + 7) // 8
@@ -71,7 +69,6 @@ def _send_bytes(blob: bytes, arb_id: int):
             except Exception as ex:
                 print(f"[HEX] send failed: {ex}")
                 return
-        # consecutive pacing ~0.1 ms
         time.sleep(FRAME_DELAY_S)
 
     print("[HEX] broadcast complete")

@@ -85,7 +85,7 @@ def handle(msg: can.Message) -> None:
         return
 
     # Correct next value received -> emit flag on 0x2A1
-    flag_text = "FLAG{R0ll1ng_crc_s0lv3d}"
+    flag_text = "DMI{R0ll1ng_crc_s0lv3d}"
     if chunk_and_send_flag:
         try:
             chunk_and_send_flag(ARB_ID, flag_text)

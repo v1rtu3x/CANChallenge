@@ -44,7 +44,7 @@ def _reset():
 
 def _success():
     print("[timing_replay] SUCCESS -> sending flag on 0x7F4")
-    flag_text = "FLAG{t1m1ng_replay_ok}"
+    flag_text = "DMI{t1m1ng_replay_ok}"
     if chunk_and_send_flag:
         try:
             chunk_and_send_flag(FLAG_ID, flag_text)
