@@ -15,6 +15,18 @@ try:
 except Exception:  # pragma: no cover - fallback for dev
     chunk_and_send_flag = None
 
+# Observe broadcast pause flag from dispatcher (optional import)
+try:
+    import dispatcher
+except Exception:
+    dispatcher = None
+
+def _is_paused() -> bool:
+    try:
+        return bool(getattr(dispatcher, "DISPATCHER_PAUSED", False))
+    except Exception:
+        return False
+
 ARB_ID = 0x2A1
 TICK_SECONDS = 15.0
 
@@ -38,21 +50,39 @@ def _pack(counter: int) -> bytes:
     c = crc8_2f(body)
     return body + bytes([c])
 
+def _safe_send(arb: int, payload: bytes) -> None:
+    """Send only when not paused; wait out broadcast windows."""
+    while _is_paused():
+        time.sleep(0.05)
+    send_can_frame(arb, payload)
+
 def _emit_current() -> None:
     st = get_state("rolling_crc") or {}
     ctr = st.get("counter", 0)
     payload = _pack(ctr)
-    send_can_frame(ARB_ID, payload)
+    _safe_send(ARB_ID, payload)
 
 def _ticker_loop():
+    # Sleep in short steps so we can react quickly to pause/unpause
+    STEP = 0.25
+    acc = 0.0
     while True:
-        # Sleep first so we don't spam right at start; start() emits once immediately.
-        time.sleep(TICK_SECONDS)
+        # If a broadcast window is active, hold here (no ticking, no sending)
+        while _is_paused():
+            time.sleep(0.05)
+            acc = 0.0  # reset accumulated sleep so we start a fresh 15s after resume
+
+        time.sleep(STEP)
+        acc += STEP
+        if acc < TICK_SECONDS:
+            continue
+        acc = 0.0
+
         st = get_state("rolling_crc") or {}
         ctr = (st.get("counter", 0) + 1) & 0xFF
         update_state("rolling_crc", {"counter": ctr})
         payload = _pack(ctr)
-        send_can_frame(ARB_ID, payload)
+        _safe_send(ARB_ID, payload)
 
 _ticker_thread: Optional[threading.Thread] = None
 
@@ -68,6 +98,10 @@ def start():
 
 # --------------- Ingress handler ----------------------------------
 def handle(msg: can.Message) -> None:
+    # While paused, ignore incoming attempts (no flag emission during broadcast)
+    if _is_paused():
+        return
+
     if msg.arbitration_id != ARB_ID:
         return
     if msg.dlc != 8 or msg.is_error_frame or msg.is_remote_frame:
@@ -84,13 +118,15 @@ def handle(msg: can.Message) -> None:
     if body[0] != expected:
         return
 
-    # Correct next value received -> emit flag on 0x2A1
+    # Correct next value received -> emit flag on 0x2A1 (but not during broadcast)
     flag_text = "DMI{R0ll1ng_crc_s0lv3d}"
     if chunk_and_send_flag:
         try:
+            # Wait out any broadcast window before chunking, to avoid interleaving
+            while _is_paused():
+                time.sleep(0.05)
             chunk_and_send_flag(ARB_ID, flag_text)
         except Exception:
-            # Fallback to single frame if utils.flags fails
-            send_can_frame(ARB_ID, flag_text.encode("ascii", errors="ignore")[:8])
+            _safe_send(ARB_ID, flag_text.encode("ascii", errors="ignore")[:8])
     else:
-        send_can_frame(ARB_ID, flag_text.encode("ascii", errors="ignore")[:8])
+        _safe_send(ARB_ID, flag_text.encode("ascii", errors="ignore")[:8])

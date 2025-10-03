@@ -13,7 +13,7 @@ import dispatcher
 HEX_PATH = "resources/payload.hex"  # text file with hex bytes (any separators/whitespace ok)
 ARB_ID = 0x600
 
-INTERVAL_S = 90.0           # broadcast period
+INTERVAL_S = 240           # broadcast period
 FRAME_DELAY_S = 0.05        # 50 ms between consecutive frames
 QUIET_GRACE_S = 0.2         # small settle time after pause
 
