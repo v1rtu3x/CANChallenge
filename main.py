@@ -8,7 +8,8 @@ from dispatcher import handle_can_message
 from state import init_state
 from challenges.startup_flag import send_startup_flag
 from challenges import rolling_crc
-from challenges import hex_broadcast  # <-- NEW
+from challenges import timing_replay
+from challenges import hex_broadcast
 
 def main():
     print("[INFO] Starting UDS ECU simulation with PCI")
@@ -19,6 +20,7 @@ def main():
 
     init_state()
     rolling_crc.start()
+    timing_replay.start()
     threading.Thread(target=send_startup_flag, daemon=True).start()
 
     # Start normal sim traffic as before (unaltered)

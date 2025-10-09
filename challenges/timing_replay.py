@@ -4,6 +4,8 @@ import time
 import can
 from io_can import send_can_frame
 from state import get_state, update_state
+import threading
+import dispatcher
 
 try:
     from utils.flags import chunk_and_send_flag
@@ -116,3 +118,40 @@ def handle(msg: can.Message) -> None:
 
     # Ignore arbitrary noise on 0x440
     return
+
+OUT_ID = 0x220
+PERIOD_S = 20.0
+FRAME_DELAY_S = 0.02
+
+_thread = None
+
+def _broadcast_once():
+    """Send the SEQ frames on OUT_ID in order."""
+    for payload in SEQ:
+        try:
+            send_can_frame(OUT_ID, payload)
+        except Exception as e:
+            print(f"[timing_replay] send error: {e}")
+        time.sleep(FRAME_DELAY_S)
+
+def _loop():
+    """Every PERIOD_S, send SEQ if dispatcher isn't paused (hex broadcast inactive)."""
+    while True:
+        time.sleep(PERIOD_S)
+        try:
+            if getattr(dispatcher, "DISPATCHER_PAUSED", False):
+                # Skip this cycle while HEX broadcast window is active
+                continue
+        except Exception:
+            # If anything goes wrong, assume not paused and try to send
+            pass
+        print("[timing_replay] periodic: sending SEQ on 0x%03X" % OUT_ID)
+        _broadcast_once()
+
+def start():
+    """Start the periodic broadcaster thread (idempotent)."""
+    global _thread
+    if _thread is None or not _thread.is_alive():
+        _thread = threading.Thread(target=_loop, name="timing_replay_periodic", daemon=True)
+        _thread.start()
+        print("[timing_replay] periodic broadcaster started")

@@ -85,18 +85,70 @@ CANChallenge/
 
 ## Implemented challenges (short summaries)
 
-### Timing-Sensitive Replay — ID `0x440`
+### Startup Flag - “Morning Broadcast”
 
-Send five exact 8-byte payloads **in order** with inter-frame gaps in **0.080–0.120 s** to receive a flag on `0x7F4`.
+A quiet diagnostic beacon comes alive in the factory’s overnight maintenance loop. When conditions are right it blurts out a mysterious startup message — but when the heavy broadcast system spins up, the beacon goes silent. Your mission: catch the message in the act.
 
-### Rolling CRC Counter — ID `0x2A1`
+**Flag Arbitration ID:** `0x555`
 
-Observe the rolling counter, compute the next counter and CRC-8 (poly `0x2F`, init `0xFF`, final XOR), then send a valid frame to trigger a flag on `0x2A1`.
+### Majority Spoof — “Three-Wheel Consensus”
 
-### Majority / Consensus Spoof — IDs `0x120/0x121/0x122` (+ `0x210`, probe `0x2B0`)
+Three redundant wheel sensors decide when the vehicle is truly at rest. If enough of them agree and the lock is engaged, a hidden rescue routine springs to life. Your job is to trick the system into that state and trigger the response.
 
-Force ≥2 simulated wheel ECUs to report `0 km/h` for ≥1 s while `0x210` reports `lock=1`, then `cansend vcan0 2B0#55` → flag on `0x7F3`.
+**IDs:** Wheels `0x120`, `0x121`, `0x122`; Lock `0x210`; Poke `0x2B0`; Flag `0x7F3`
 
-### Arbitration Window Exploit — low IDs
+### Timing Replay — “The Ghost Injector”
 
-Flood low IDs (≤ `0x00F`) to open a maintenance window, then send a probe (
+In the shadows of the test bay, an **ECU** and a **ghost module** exchange a secret handshake — one that only completes when a **precise sequence of CAN frames** is delivered at the **perfect tempo**.
+
+Your task is to **recreate this ritual**: transmit the required frame sequence in rhythm, and the rig will respond.
+
+- **Arbitration ID (output):** `0x220`
+- **Success flag (input):** `0x440`emitted on `0x7F4`
+
+### Arbitration Window — “Flood the Bus, Swing the Gate”
+
+You’re planning a coordinated assault on the bus. By hammering low-priority IDs fast enough you can force open a temporary grace window, then slip in a probe and a follow-up “kick” with the right signatures. Do it correctly and the gate unlocks.
+
+**Key IDs:** Low IDs ≤`0x00F` (trigger), probe `0x014`, kick `0x215`; Flag `0x7F2`
+
+### Rolling CRC — “The Clockwork Odometer”
+
+A quiet node ticks every 15 seconds, publishing a counter plus a checksum. If you can anticipate its next step and answer with a valid frame, it will treat you as a trusted companion and reveal its secret.
+
+**Arbitration ID (challenge &## Developer notes
+
+- `dispatcher.py` is the central router — it prints every message it routes and calls the per-challenge `handle(msg)` function.
+- `hex_broadcast.py` temporarily sets a global pause (`dispatcher.pause_dispatcher()`), kills any `cangen` processes, streams the `payload.hex` file in chunks, then resumes normal dispatching. Challenges check `dispatcher.DISPATCHER_PAUSED` and typically avoid sending flags during broadcast windows.
+- Challenges may implement a `start()` function (for periodic behaviour) and are usually launched by `main.py`.
+- Persistent per-challenge state is stored via `state.py` to allow multi-step interactions and retries.
+
+---
+
+## Troubleshooting
+
+- If the simulator won't start, ensure `vcan0` exists and `python-can` is installed.
+- If flags don't appear, check that the corresponding challenge is not paused by the hex broadcaster (watch the logs for "paused" / "resumed").
+- Use `candump vcan0` to verify traffic and timestamps; `cansend` to inject frames. flag):** `0x2A1`. 
+
+
+### Hex Broadcast — “The Firmware Dump”
+
+At intervals, a maintenance routine opens a window and streams a hidden firmware blob over the bus, padded by long runs of zeros at the start and end. Capture the right portion and you’ll recover the embedded payload.
+
+**Arbitration ID:** `0x600`.
+
+## Developer notes
+
+- `dispatcher.py` is the central router — it prints every message it routes and calls the per-challenge `handle(msg)` function.
+- `hex_broadcast.py` temporarily sets a global pause (`dispatcher.pause_dispatcher()`), kills any `cangen` processes, streams the `payload.hex` file in chunks, then resumes normal dispatching. Challenges check `dispatcher.DISPATCHER_PAUSED` and typically avoid sending flags during broadcast windows.
+- Challenges may implement a `start()` function (for periodic behaviour) and are usually launched by `main.py`.
+- Persistent per-challenge state is stored via `state.py` to allow multi-step interactions and retries.
+
+---
+
+## Troubleshooting
+
+- If the simulator won't start, ensure `vcan0` exists and `python-can` is installed.
+- If flags don't appear, check that the corresponding challenge is not paused by the hex broadcaster (watch the logs for "paused" / "resumed").
+- Use `candump vcan0` to verify traffic and timestamps; `cansend` to inject frames.
