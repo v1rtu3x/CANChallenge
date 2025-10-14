@@ -123,6 +123,12 @@ A quiet node ticks every 15 seconds, publishing a counter plus a checksum. If yo
 - Challenges may implement a `start()` function (for periodic behaviour) and are usually launched by `main.py`.
 - Persistent per-challenge state is stored via `state.py` to allow multi-step interactions and retries.
 
+ ### Hex Broadcast — “The Firmware Dump”
+
+At intervals, a maintenance routine opens a window and streams a hidden firmware blob over the bus, padded by long runs of zeros at the start and end. Capture the right portion and you’ll recover the embedded payload.
+
+**Arbitration ID:** `0x600`.
+
 ---
 
 ## Troubleshooting
@@ -131,12 +137,6 @@ A quiet node ticks every 15 seconds, publishing a counter plus a checksum. If yo
 - If flags don't appear, check that the corresponding challenge is not paused by the hex broadcaster (watch the logs for "paused" / "resumed").
 - Use `candump vcan0` to verify traffic and timestamps; `cansend` to inject frames. flag):** `0x2A1`. 
 
-
-### Hex Broadcast — “The Firmware Dump”
-
-At intervals, a maintenance routine opens a window and streams a hidden firmware blob over the bus, padded by long runs of zeros at the start and end. Capture the right portion and you’ll recover the embedded payload.
-
-**Arbitration ID:** `0x600`.
 
 ## Developer notes
 
